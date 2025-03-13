@@ -2,10 +2,10 @@ from openai import OpenAI
 import streamlit as st
 
 
-client = OpenAI(api_key=st.session_state.openai_api_key)
 
 
-def intent_rewriter(model, conversation_history):
+
+def intent_rewriter(client, model, conversation_history):
     conversation = "\n".join(conversation_history)
     PLAN_WRITER_PROMPT = f"""Your task is to transform a conversation between a USER and an AGENT into a clear and unambiguous 'task sentence' that includes all relevant information and reflects the user's intents as expressed throughout the conversation. 
 Input: {conversation}
@@ -22,7 +22,7 @@ Your output should be phrased as an instructional sentence, such as "Build a ...
 
 
 # Placeholder for planner module
-def planner(model, request_str):
+def planner(client, model, request_str):
 
     if isinstance(request_str, list):
         request_str = "\n".join(request_str)
@@ -49,7 +49,7 @@ Input: {request_str}
     return response
 
 
-def openai_dialogue_agent(model, dialogue_history):
+def openai_dialogue_agent(client, model, dialogue_history):
     if isinstance(dialogue_history, list):
         dialogue_history = "\n".join([str(ut) for ut in dialogue_history])
     DIALOGUE_PROMPT = "Please continue the conversation with the user."

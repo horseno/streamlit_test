@@ -3,7 +3,7 @@ import streamlit_mermaid as stmd
 
 import utils
 from openai import OpenAI
-
+import agents
 
 # Add OpenAI API key input in sidebar
 if "openai_api_key" not in st.session_state:
@@ -27,7 +27,7 @@ if validate_button:
             st.session_state.openai_api_key = api_key
             st.session_state.api_key_validated = True
             st.sidebar.success("API key validated successfully!")
-            import agents
+
         except Exception as e:
             st.sidebar.error("Invalid API key. Please check and try again.")
             st.session_state.openai_api_key = None
@@ -56,6 +56,7 @@ if view_mode == "Live Chat":
             "Please enter and validate your OpenAI API key in the sidebar to use the live chat."
         )
     else:
+        client = OpenAI(api_key=st.session_state.openai_api_key)
         # Initialize chat history
         if "conversation_history" not in st.session_state:
             st.session_state.conversation_history = []
@@ -74,7 +75,7 @@ if view_mode == "Live Chat":
             )
 
             response = agents.openai_dialogue_agent(
-                model, st.session_state.conversation_history
+                client, model, st.session_state.conversation_history
             )
             st.session_state.conversation_history.append(
                 {"role": "assistant", "content": response}
@@ -87,19 +88,24 @@ if view_mode == "Live Chat":
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write("Plan 1:")
-                    rewritten_intent = agents.intent_rewriter(model, user_input)
+                    rewritten_intent = agents.intent_rewriter(client, model, user_input)
                     stmd.st_mermaid(
-                        utils.generate_mermaid(agents.planner(model, rewritten_intent))
+                        utils.generate_mermaid(
+                            agents.planner(client, model, rewritten_intent)
+                        )
                     )
                 with col2:
                     st.write("Plan 2:")
                     stmd.st_mermaid(
-                        utils.generate_mermaid(agents.planner(model, user_input))
+                        utils.generate_mermaid(
+                            agents.planner(client, model, user_input)
+                        )
                     )
 else:
     if not st.session_state.openai_api_key:
         st.error("Please enter a valid OpenAI API key in the sidebar to view plans.")
     else:
+        client = OpenAI(api_key=st.session_state.openai_api_key)
         # Pre-defined conversations
         predefined_conversations = {
             "Job Search": [
@@ -139,9 +145,9 @@ else:
             with col1:
                 st.write("Plan 1:")
                 rewritten_intent = agents.intent_rewriter(
-                    model, predefined_conversations[selected_conversation]
+                    client, model, predefined_conversations[selected_conversation]
                 )
-                plan = agents.planner(model, rewritten_intent)
+                plan = agents.planner(client, model, rewritten_intent)
                 print("PLAN 1: ", plan)
                 markdown = utils.generate_mermaid(plan)
                 print("MARKDOWN 1: ", markdown)
@@ -149,7 +155,7 @@ else:
             with col2:
                 st.write("Plan 2:")
                 plan = agents.planner(
-                    model, predefined_conversations[selected_conversation]
+                    client, model, predefined_conversations[selected_conversation]
                 )
                 print("PLAN 2: ", plan)
                 markdown = utils.generate_mermaid(plan)
