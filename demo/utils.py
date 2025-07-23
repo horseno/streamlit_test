@@ -13,6 +13,7 @@ def escape_char(s: str) -> str:
     return "".join(
         c if c.isalnum() or c in [" ", ",", "."] else f"#{ord(c)};" for c in s
     )
+    return 
 
 
 def generate_mermaid(plan_str):
@@ -21,9 +22,10 @@ def generate_mermaid(plan_str):
     else:
         plan = plan_str
     nodes, edges = plan["nodes"], plan["edges"]
-    node_name = {item["id"]: escape_char(item["name"]) for item in nodes}
+    node_name = {item["id"]: item["name"] for item in nodes}
+
     content = "\n".join(
-        [f"{s}[{s}{node_name[s]}]-->{e}[{e}{node_name[e]}]" for (s, e) in edges]
+        [f"{s}[\"{s}{node_name[s]}\"]-->{e}[\"{e}{node_name[e]}\"]" for (s, e) in edges]
     )
     markdown = "graph TD\n" + content + "\n"
     print("MERMAID RESPONSE: ", markdown)

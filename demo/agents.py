@@ -1,16 +1,23 @@
 from openai import OpenAI
 import streamlit as st
-
+import json
 
 
 
 
 def intent_rewriter(client, model, conversation_history):
     conversation = "\n".join(conversation_history)
-    PLAN_WRITER_PROMPT = f"""Your task is to transform a conversation between a USER and an AGENT into a clear and unambiguous 'task sentence' that includes all relevant information and reflects the user's intents as expressed throughout the conversation. 
-Input: {conversation}
-Your output should be phrased as an instructional sentence, such as "Build a ..." or "Design a ...".
-"""
+    PLAN_WRITER_PROMPT = f"""Summarize the following USER-AGENT conversation into a single, concise sentence describing the user’s intended task 
+        The summary should reflect the user’s goal or intent, in an instruction style. Do not introduce new information. Only include what is stated or clearly implied.
+        The intent should reflect the latest intent and can include multiple intents. Ingore unrelated utterences. If later unterence is not directly related to uer intent, keep the previous intent.
+        Example: 
+        User: I want to learn about testing software
+        Assistant: sure....
+        User: How are you?
+        Here intent should still be [learn about software testing]
+        Conversation:
+        {conversation}
+    """
     response = client.chat.completions.create(
         model=model,
         messages=[{"role": "system", "content": PLAN_WRITER_PROMPT}],
@@ -49,15 +56,28 @@ Input: {request_str}
     return response
 
 
-def openai_dialogue_agent(client, model, dialogue_history):
+
+
+
+def openai_dialogue_agent(client, model, dialogue_history, intent, plan):
     if isinstance(dialogue_history, list):
         dialogue_history = "\n".join([str(ut) for ut in dialogue_history])
-    DIALOGUE_PROMPT = "Please continue the conversation with the user."
+    DIALOGUE_PROMPT = """
+        You are a response generation module in a dialogue agent. You will be given a conversation between a user and an assistant. Another module will analyze the user's intent and generate a plan to fulfill the user's request.
+
+        Your task:
+        * Continue the conversation based on the provided intent and plan, **be concise**
+        * **Do not attempt** to create your own plan—rely solely on the given intent and plan.
+        * Clearly explain how the plan would be executed if the system had access to real tools and data sources.
+        * Since this is a demonstration, simulate the results of executing the plan and continue the conversation accordingly. **Clearly communicate** to the user that this is not real data.
+        """
+    content = f"Conversation:{dialogue_history}\n Intent:{intent} \n Plan:{json.dumps(plan)}  "
+    
     stream = client.chat.completions.create(
         model=model,
         messages=[
             {"role": "system", "content": DIALOGUE_PROMPT},
-            {"role": "user", "content": dialogue_history},
+            {"role": "user", "content": content},
         ],
         stream=True,
         temperature=0,

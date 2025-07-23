@@ -43,10 +43,10 @@ if not st.session_state.api_key_validated:
 
 # Add sidebar selection
 view_mode = st.sidebar.selectbox(
-    "Select View", ["Pre-loaded Conversation", "Live Chat"]
+    "Select View", ["Live Chat", "Pre-loaded Conversation",]
 )
 
-model = "gpt-4o-mini"
+model = "gpt-4.1"
 
 st.title("Interactive Chat-Based Task Planner")
 
@@ -74,33 +74,24 @@ if view_mode == "Live Chat":
                 {"role": "user", "content": user_input}
             )
 
-            response = agents.openai_dialogue_agent(
-                client, model, st.session_state.conversation_history
-            )
-            st.session_state.conversation_history.append(
-                {"role": "assistant", "content": response}
-            )
+
             with st.chat_message("assistant"):
+                
+                rewritten_intent = agents.intent_rewriter(client, model, user_input)
+                plan = agents.planner(client, model, rewritten_intent)
+
+                st.info(f"**User Intent**: {rewritten_intent}")
+                st.info("**Generated Plan**")
+                stmd.st_mermaid(utils.generate_mermaid(plan))
+                
+
+                response = agents.openai_dialogue_agent(
+                client, model, st.session_state.conversation_history, rewritten_intent, plan)
                 st.write(response)
-                st.write(
-                    "Plans given information so far. Please continue the conversation as necessary. Plans will be updated accordingly."
+                st.session_state.conversation_history.append(
+                    {"role": "assistant", "content": response}
                 )
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write("Plan 1:")
-                    rewritten_intent = agents.intent_rewriter(client, model, user_input)
-                    stmd.st_mermaid(
-                        utils.generate_mermaid(
-                            agents.planner(client, model, rewritten_intent)
-                        )
-                    )
-                with col2:
-                    st.write("Plan 2:")
-                    stmd.st_mermaid(
-                        utils.generate_mermaid(
-                            agents.planner(client, model, user_input)
-                        )
-                    )
+
 else:
     if not st.session_state.openai_api_key:
         st.error("Please enter a valid OpenAI API key in the sidebar to view plans.")
@@ -127,7 +118,7 @@ else:
                 "assistant: No problem! Let me outline a structured learning path for you.",
             ],
         }
-
+        st.write("Compare the impact of effective user intent understanding on planning.")
         selected_conversation = st.selectbox(
             "Select a Pre-loaded Conversation", list(predefined_conversations.keys())
         )
@@ -143,21 +134,18 @@ else:
             st.write("Generated Plans:")
             col1, col2 = st.columns(2)
             with col1:
-                st.write("Plan 1:")
                 rewritten_intent = agents.intent_rewriter(
                     client, model, predefined_conversations[selected_conversation]
                 )
+                st.info(f"Planned using the intent:\n {rewritten_intent}")
+                
                 plan = agents.planner(client, model, rewritten_intent)
-                print("PLAN 1: ", plan)
                 markdown = utils.generate_mermaid(plan)
-                print("MARKDOWN 1: ", markdown)
                 stmd.st_mermaid(markdown)
             with col2:
-                st.write("Plan 2:")
+                st.info("Planned using the entire conversation.")
                 plan = agents.planner(
                     client, model, predefined_conversations[selected_conversation]
                 )
-                print("PLAN 2: ", plan)
                 markdown = utils.generate_mermaid(plan)
-                print("MARKDOWN 2: ", markdown)
                 stmd.st_mermaid(markdown)
